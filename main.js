@@ -46,16 +46,29 @@ canvas.addEventListener('mousemove', e => {
     mouse.y = e.clientY;
 });
 
-canvas.addEventListener('mousedown', e => {
-    mouse.isDown = true;
+let rightClickStart = null;
+canvas.addEventListener("mousedown", (e) => {
+    console.log(e.button);
+    if (e.button === 0) {
+        mouse.isDown = true;
+    }
+    if (e.button === 2) {
+        rightClickStart = Date.now();
+    }
 });
-
-
-
-canvas.addEventListener('mouseup', e => {
+canvas.addEventListener("mouseup", (e) => {
     mouse.isDown = false;
+    if (e.button === 2 && rightClickStart) {
+        const heldTime = Date.now() - rightClickStart;
+        if (heldTime > 500) {
+            towers.push(new OrangUtanTower(mouse.x, mouse.y));
+        } else {
+            towers.push(new MonkeyTower(mouse.x, mouse.y));
+        }
+        rightClickStart = null;
+    }
 });
-
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
 function calcBubbleOpacity(x) {
     var y = -((1-x)/(0.05));
@@ -140,9 +153,11 @@ class Bubble {
             frictionAir: 0.0,
             collisionFilter: { group: 0 },
         });
+        this.rotation = 0;
+        this.spinVelocity = 0;
 
         // zufällige Anfangsgeschwindigkeit
-        const speed = Math.random() * 0.5 + 0.2;
+        const speed = Math.random() * 0.2 + 0.2;
         const angle = Math.random() * Math.PI * 2;
         Body.setVelocity(this.body, {
             x: Math.cos(angle) * speed * 10,
@@ -160,22 +175,24 @@ class Bubble {
         const x = this.body.position.x;
         const y = this.body.position.y;
 
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(this.rotation); // Only rotates visually if spinVelocity ≠ 0
+
         const steps = [0, 0.55, 0.65, 0.7, 0.75, 0.8, 0.9, 0.95, 1];
-        const gradient = ctx.createRadialGradient(x, y, this.radius * 0.2, x, y, this.radius);
+        const gradient = ctx.createRadialGradient(0, 0, this.radius * 0.2, 0, 0, this.radius);
         steps.forEach((step) =>
             gradient.addColorStop(step, `rgba(${this.color[0]},${this.color[1]},${this.color[2]},${calcBubbleOpacity(step)})`)
         );
 
         ctx.beginPath();
         ctx.fillStyle = gradient;
-        ctx.arc(x, y, this.radius, 0, Math.PI * 2);
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.save();
 
         // Highlight
         const angleRadians = 235 * Math.PI / 180;
-        const pos = pointOnCircle(x, y, this.radius * 0.8, angleRadians);
-
+        const pos = pointOnCircle(0, 0, this.radius * 0.8, angleRadians);
         ctx.beginPath();
         ctx.ellipse(pos.x, pos.y, 16, 6.5, angleRadians + Math.PI / 2, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
@@ -183,6 +200,7 @@ class Bubble {
 
         ctx.restore();
     }
+
 
     handleMouseForce() {
         const MOUSE_INFLUENCE_RADIUS_PULL = 1000;
@@ -211,12 +229,180 @@ class Bubble {
         }
     }
 
+    handleSpin() {
+        this.rotation += this.spinVelocity;
+        // Friction: gradually reduce spin
+        this.spinVelocity *= 0.98; // Lower means faster stop
+        // If it's small enough, stop completely
+        if (Math.abs(this.spinVelocity) < 0.001) {
+            this.spinVelocity = 0;
+        }
+    }
+
     update(ctx) {
         this.localWind.update();
         this.handleMouseForce();
+        this.handleSpin()
         this.draw(ctx);
     }
 }
+
+
+class MonkeyTower {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.arrows = [];
+        this.shootInterval = 1500 + Math.random() * 2000; // alle 1.5-3.5 Sekunden schießen
+        this.lastShotTime = Date.now();
+    }
+
+    update() {
+        // Pfeile schießen
+        if (Date.now() - this.lastShotTime > this.shootInterval) {
+            this.shootArrow();
+            this.lastShotTime = Date.now();
+            this.shootInterval = 1500 + Math.random() * 2000;
+        }
+
+        // Update Pfeile
+        this.arrows.forEach((arrow, i) => {
+            arrow.update();
+            if (arrow.isOutOfBounds() || arrow.toRemove) {
+                this.arrows.splice(i, 1);
+            }
+        });
+
+        // zeichnen
+        this.draw();
+    }
+
+    shootArrow() {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 7 + Math.random() * 3;
+        this.arrows.push(new Arrow(this.x, this.y, angle, speed));
+    }
+
+    draw() {
+        // Affen-Emoji zeichnen
+        ctx.font = "40px serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("🐒", this.x, this.y);
+
+        // Pfeile zeichnen
+        this.arrows.forEach(arrow => arrow.draw(ctx));
+    }
+}
+
+class OrangUtanTower {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.lastShot = 0;
+        this.shootInterval = 1500; // alle 1.5 Sekunden
+    }
+
+    update() {
+        // Emoji zeichnen
+        ctx.font = "32px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("🦧", this.x, this.y);
+
+        // Bananen werfen
+        const now = Date.now();
+        if (now - this.lastShot > this.shootInterval) {
+            bananas.push(new Banana(this.x, this.y));
+            this.lastShot = now;
+        }
+    }
+}
+
+class Banana {
+    constructor(x, y) {
+        const radius = 14;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 4 + Math.random() * 16;
+        this.body = Bodies.circle(x, y, radius, {
+            frictionAir: 0.05,     // Verlangsamt sich
+            restitution: 0.8,      // Prallt ab
+            label: "banana"
+        });
+        Body.setVelocity(this.body, {
+            x: Math.cos(angle) * speed,
+            y: Math.sin(angle) * speed
+        });
+        World.add(world, this.body);
+    }
+
+    draw() {
+        const x = this.body.position.x;
+        const y = this.body.position.y;
+        ctx.font = "20px serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("🍌", x, y);
+    }
+}
+
+class Arrow {
+    constructor(x, y, angle, speed) {
+        this.x = x;
+        this.y = y;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.radius = 15; // für Kollisionsabfrage (ungefähr)
+        this.toRemove = false;
+        this.size = 25;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Kollision mit Bubbles prüfen
+        for (let i = 0; i < bubbles.length; i++) {
+            const b = bubbles[i];
+            const dx = b.body.position.x - this.x;
+            const dy = b.body.position.y - this.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < b.radius + this.radius) {
+                // Bubble zerstören
+                World.remove(world, b.body);
+                bubbles.splice(i, 1);
+                this.toRemove = true;
+                break;
+            }
+        }
+    }
+
+    draw(ctx) {
+        const angle = Math.atan2(this.vy, this.vx);
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(angle);
+        ctx.font = `${this.size}px serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("🪃", 0, 0);
+        ctx.restore();
+    }
+
+    isOutOfBounds() {
+        return this.x < -50 || this.x > canvas.width + 50 || this.y < -50 || this.y > canvas.height + 50;
+    }
+}
+
+
+
+
+
+
+
+
+
 
 function handleMouseCircle() {
     if (mouse.isDown) {
@@ -230,11 +416,50 @@ function handleMouseCircle() {
 
 }
 
+function handleBananaCollision() {
+    for (let bananaIndex = 0; bananaIndex < bananas.length; bananaIndex++) {
+        const banana = bananas[bananaIndex];
+        banana.draw();
+
+        for (let i = 0; i < bubbles.length; i++) {
+            const bubble = bubbles[i];
+            const dx = banana.body.position.x - bubble.body.position.x;
+            const dy = banana.body.position.y - bubble.body.position.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < bubble.radius + 14) {
+                // Remove banana
+                World.remove(world, banana.body);
+                bananas.splice(bananaIndex, 1);
+                banana.toRemove = true;
+
+                // Apply push force
+                const angle = Math.random() * Math.PI * 2;
+                const force = 0.02 + Math.random() * 0.02;
+                const fx = Math.cos(angle) * force;
+                const fy = Math.sin(angle) * force;
+                //Body.applyForce(bubble.body, bubble.body.position, { x: fx, y: fy });
+
+                // 🌀 Add random spin
+                const spin = (Math.random() * 0.15 + 0.05) * (Math.random() < 0.5 ? -1 : 1);
+                bubble.spinVelocity = spin
+                Body.setAngularVelocity(bubble.body, spin);
+            }
+        }
+    }
+}
+
+
+
 const bubbles = [];
-const bubbleCount = 45;
+const bubbleCount = 20;
 for (let i = 0; i < bubbleCount; i++) {
     bubbles.push(new Bubble());
 }
+ /* TOWERS */
+const towers = [];
+const bananas = [];
+
 
 const globalWind = new Wind(0.000001, 0.000001, 2000, 1000, 2000, 4000, bubbles);
 
@@ -243,11 +468,18 @@ function animate() {
     Engine.update(engine);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     handleMouseCircle();
+    handleBananaCollision();
+
     for (let b of bubbles) {
         b.update();
         globalWind.update();
     }
+
+    // Affen updaten & zeichnen
+    towers.forEach(t => t.update());
+
     requestAnimationFrame(animate);
 }
 
