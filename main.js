@@ -1,12 +1,81 @@
+
+
+
 const canvas = document.getElementById("bubbleCanvas");
 const ctx = canvas.getContext("2d");
 
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-window.addEventListener("resize", resizeCanvas);
-resizeCanvas();
+
+
+const MAX_TOWERS = 20;
+
+
+/* WIND */
+const GLOBAL_WIND_FORCEMIN =  0.000001;
+const GLOBAL_WIND_FORCEEXTENSION =  0.000001;
+const GLOBAL_WIND_WAITTIMEMIN =  2000;
+const GLOBAL_WIND_WAITTIMEEXTENSION =  1000;
+const GLOBAL_WIND_DURATIONMIN =  2000;
+const GLOBAL_WIND_DURATIONEXTENSION =  4000;
+
+const LOCAL_WIND_FORCEMIN =  0.000001;
+const LOCAL_WIND_FORCEEXTENSION =  0.001;
+const LOCAL_WIND_WAITTIMEMIN =  1000;
+const LOCAL_WIND_WAITTIMEEXTENSION =  10000;
+const LOCAL_WIND_DURATIONMIN =  1000;
+const LOCAL_WIND_DURATIONEXTENSION =  5000;
+
+
+/* BUBBLE */
+var BUBBLE_COUNT = parseInt(window.innerWidth * window.innerHeight / 140000 + 8, 10);
+const BUBBLE_DEFAULT_RADIUS = parseInt(0.05 * window.innerHeight + 40, 10);
+var BUBBLE_RADIUS = BUBBLE_DEFAULT_RADIUS
+const BUBBLE_RESTITUTION = 0.9;
+const BUBBLE_INITIAL_SPEED_MIN = 2;
+const BUBBLE_INITIAL_SPEED_EXTENSION = 2;
+const BUBBLE_SPAWN_FACTOR = 4;
+
+
+/* MOUSE */
+const MOUSE_INFLUENCE_RADIUS_PULL = 1000;
+const MOUSE_FORCE_FACTOR_PULL = 0.1;
+const MOUSE_INFLUENCE_RADIUS_PUSH = 150;
+const MOUSE_FORCE_FACTOR_PUSH = 0.01;
+const MOUSE_MIN_DISTANCE = 80;
+const MOUSE_EXPONENTIAL_OFFSET = 50;
+const MOUSE_CIRCLE_RADIUS = 20;
+
+
+/* MONKEY */
+const MONKEY_SHOOTINTERVAL_MIN = 5000;
+const MONKEY_SHOOTINTERVAL_EXTENSION = 5000;
+const MONKEY_LIFETIME = 60000;
+const MONKEY_FONTSIZE = 40;
+
+
+/* ORANGUTAN */
+const ORANGUTAN_SHOOTINTERVAL_MIN = 10000;
+const ORANGUTAN_SHOOTINTERVAL_EXTENSION = 5000;
+const ORANGUTAN_LIFETIME = 60000;
+const ORANGUTAN_FONTSIZE = 40;
+
+/* ARROW */
+const ARROW_SPEED_MIN = 7;
+const ARROW_SPEED_EXTENSION = 10;
+const ARROW_RADIUS = 15;
+const ARROW_FONTSIZE = 25;
+
+/* BANANA */
+const BANANA_SPIN_VELOCITY_FACTOR = 0.98; // Lower means faster stop
+const BANANA_LIFETIME = 10000;
+const BANANA_FONTSIZE = 20;
+const BANANA_FORCE_MIN = 4;
+const BANANA_FORCE_EXTENSION = 16;
+const BANANA_FRICTIONAIR = 0.05;
+const BANANA_RESTITUTION = 0.8;
+const BANANA_RADIUS = 14;
+const BANANA_SPIN_FORCE_MIN = 0.05;
+const BANANA_SPIN_FORCE_EXTENSION = 0.15;
+
 
 /* Matter.js setup */
 const Engine = Matter.Engine,
@@ -21,35 +90,59 @@ engine.gravity.y = 0;
 
 
 /* WALLS */
-const wallThickness = 100; // Dicke der Wände außerhalb des Bildschirms
+const wallThickness = 100;
 
-const walls = [
-    // Oben
-    Matter.Bodies.rectangle(canvas.width / 2, -wallThickness / 2, canvas.width, wallThickness, { isStatic: true }),
-    // Unten
-    Matter.Bodies.rectangle(canvas.width / 2, canvas.height + wallThickness / 2, canvas.width, wallThickness, { isStatic: true }),
-    // Links
-    Matter.Bodies.rectangle(-wallThickness / 2, canvas.height / 2, wallThickness, canvas.height, { isStatic: true }),
-    // Rechts
-    Matter.Bodies.rectangle(canvas.width + wallThickness / 2, canvas.height / 2, wallThickness, canvas.height, { isStatic: true }),
-];
+var walls;
+function calcWalls() {
+    walls = [
+        // Oben
+        Matter.Bodies.rectangle(canvas.width / 2, -wallThickness / 2, canvas.width, wallThickness, { isStatic: true }),
+        // Unten
+        Matter.Bodies.rectangle(canvas.width / 2, canvas.height + wallThickness / 2, canvas.width, wallThickness, { isStatic: true }),
+        // Links
+        Matter.Bodies.rectangle(-wallThickness / 2, canvas.height / 2, wallThickness, canvas.height, { isStatic: true }),
+        // Rechts
+        Matter.Bodies.rectangle(canvas.width + wallThickness / 2, canvas.height / 2, wallThickness, canvas.height, { isStatic: true }),
+    ];
+}
+calcWalls();
 
 Matter.World.add(engine.world, walls);
+
+
+
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    if (walls && walls.length > 0) {
+        Matter.World.remove(engine.world, walls);
+    }
+
+    calcWalls();
+    Matter.World.add(engine.world, walls);
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
 
 
 /* MOUSE */
 const mouse = { x: canvas.width / 2, y: canvas.height / 2, isDown: false };
 
-
+/* EVENTS */
 canvas.addEventListener('mousemove', e => {
     mouse.x = e.clientX;
     mouse.y = e.clientY;
 });
 
+let leftClickStart = null;
 let rightClickStart = null;
 canvas.addEventListener("mousedown", (e) => {
     console.log(e.button);
     if (e.button === 0) {
+        leftClickStart = Date.now();
         mouse.isDown = true;
     }
     if (e.button === 2) {
@@ -58,6 +151,11 @@ canvas.addEventListener("mousedown", (e) => {
 });
 canvas.addEventListener("mouseup", (e) => {
     mouse.isDown = false;
+    if (e.button === 0 && Date.now() - leftClickStart < 500 && checkBubbleFits(BUBBLE_RADIUS)) {
+        const newBubble = new Bubble(false);
+        Matter.Body.setPosition(newBubble.body, { x: mouse.x, y: mouse.y });
+        bubbles.push(newBubble);
+    }
     if (e.button === 2 && rightClickStart) {
         const heldTime = Date.now() - rightClickStart;
         if (heldTime > 500) {
@@ -65,10 +163,24 @@ canvas.addEventListener("mouseup", (e) => {
         } else {
             towers.push(new MonkeyTower(mouse.x, mouse.y));
         }
+        if (towers.length > MAX_TOWERS) {
+            towers[0].toRemove = true;
+            towers.splice(0, 1);
+        }
         rightClickStart = null;
     }
 });
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const delta = Math.sign(e.deltaY);
+    BUBBLE_RADIUS -= delta * 2; // scroll up decreases deltaY => smaller
+    BUBBLE_RADIUS = Math.max(BUBBLE_DEFAULT_RADIUS * 0.4, Math.min(BUBBLE_RADIUS, BUBBLE_DEFAULT_RADIUS*3));
+});
+
+
+
 
 function calcBubbleOpacity(x) {
     var y = -((1-x)/(0.05));
@@ -82,6 +194,19 @@ function pointOnCircle(cx, cy, radius, angleRadians) {
     const y = cy + radius * Math.sin(angleRadians);
     return { x, y };
 }
+
+function checkBubbleFits(newBubbleRadius) {
+    var sum = 0;
+    bubbles.forEach((bubble) => {
+        sum += bubble.radius * bubble.radius * Math.PI;
+    })
+    sum += newBubbleRadius * newBubbleRadius * Math.PI;
+    const bufferSpaceFactor = 1.3;
+    console.log(sum);
+    console.log(window.innerHeight * window.innerWidth);
+    return sum * bufferSpaceFactor < window.innerHeight * window.innerWidth;
+}
+
 class Wind {
     constructor(forceMin, forceExtension, waitTimeMin, waitTimeExtension, durationMin, durationExtension, objects) {
         this.forceMin = forceMin;
@@ -136,9 +261,10 @@ class Wind {
     }
 }
 
+
 class Bubble {
-    constructor() {
-        this.radius = 80;
+    constructor(initalVelocity) {
+        this.radius = BUBBLE_RADIUS;
         this.color = [
             Math.floor(Math.random() * 100 + 155),
             Math.floor(Math.random() * 100 + 155),
@@ -149,7 +275,7 @@ class Bubble {
         const y = Math.random() * (canvas.height - 2 * this.radius) + this.radius;
 
         this.body = Bodies.circle(x, y, this.radius, {
-            restitution: 0.9,
+            restitution: BUBBLE_RESTITUTION,
             frictionAir: 0.0,
             collisionFilter: { group: 0 },
         });
@@ -157,14 +283,15 @@ class Bubble {
         this.spinVelocity = 0;
 
         // zufällige Anfangsgeschwindigkeit
-        const speed = Math.random() * 0.2 + 0.2;
-        const angle = Math.random() * Math.PI * 2;
-        Body.setVelocity(this.body, {
-            x: Math.cos(angle) * speed * 10,
-            y: Math.sin(angle) * speed * 10
-        });
-
-        this.localWind = new Wind(0.000001, 0.001, 1000, 10000, 1000, 5000, [this]);
+        if (initalVelocity) {
+            const speed = BUBBLE_INITIAL_SPEED_MIN + Math.random() * BUBBLE_INITIAL_SPEED_EXTENSION;
+            const angle = Math.random() * Math.PI * 2;
+            Body.setVelocity(this.body, {
+                x: Math.cos(angle) * speed,
+                y: Math.sin(angle) * speed
+            });
+        }
+        this.localWind = new Wind(LOCAL_WIND_FORCEMIN * this.radius / BUBBLE_DEFAULT_RADIUS, LOCAL_WIND_FORCEEXTENSION  * this.radius / BUBBLE_DEFAULT_RADIUS, LOCAL_WIND_WAITTIMEMIN, LOCAL_WIND_WAITTIMEEXTENSION, LOCAL_WIND_DURATIONMIN, LOCAL_WIND_DURATIONEXTENSION, [this]);
 
         World.add(world, this.body);
     }
@@ -177,14 +304,14 @@ class Bubble {
 
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(this.rotation); // Only rotates visually if spinVelocity ≠ 0
+        ctx.rotate(this.rotation);
 
+        // Gradient
         const steps = [0, 0.55, 0.65, 0.7, 0.75, 0.8, 0.9, 0.95, 1];
         const gradient = ctx.createRadialGradient(0, 0, this.radius * 0.2, 0, 0, this.radius);
         steps.forEach((step) =>
             gradient.addColorStop(step, `rgba(${this.color[0]},${this.color[1]},${this.color[2]},${calcBubbleOpacity(step)})`)
         );
-
         ctx.beginPath();
         ctx.fillStyle = gradient;
         ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
@@ -194,7 +321,7 @@ class Bubble {
         const angleRadians = 235 * Math.PI / 180;
         const pos = pointOnCircle(0, 0, this.radius * 0.8, angleRadians);
         ctx.beginPath();
-        ctx.ellipse(pos.x, pos.y, 16, 6.5, angleRadians + Math.PI / 2, 0, Math.PI * 2);
+        ctx.ellipse(pos.x, pos.y, this.radius/5, this.radius/12.3, angleRadians + Math.PI / 2, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         ctx.fill();
 
@@ -203,11 +330,6 @@ class Bubble {
 
 
     handleMouseForce() {
-        const MOUSE_INFLUENCE_RADIUS_PULL = 1000;
-        const MOUSE_FORCE_FACTOR_PULL = 0.1;
-        const MOUSE_INFLUENCE_RADIUS_PUSH = 150;
-        const MOUSE_FORCE_FACTOR_PUSH = 0.01;
-
         const dx = this.body.position.x - mouse.x;
         const dy = this.body.position.y - mouse.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -216,12 +338,12 @@ class Bubble {
             (mouse.isDown && distance < MOUSE_INFLUENCE_RADIUS_PULL);
         if (applyForce) {
             const direction = mouse.isDown ? -1 : 1;
-            const force = mouse.isDown ? MOUSE_FORCE_FACTOR_PULL : MOUSE_FORCE_FACTOR_PUSH;
+            const force = mouse.isDown ? MOUSE_FORCE_FACTOR_PULL * (this.radius / 80) * (this.radius / 80) : MOUSE_FORCE_FACTOR_PUSH * (this.radius / 80) *  (this.radius / 80);
             var forceMagnitude = 0;
             if (mouse.isDown) {
-                forceMagnitude = force / (Math.max(80,distance) - 50) * direction;
+                forceMagnitude = force / (Math.max(MOUSE_MIN_DISTANCE,distance) - MOUSE_EXPONENTIAL_OFFSET) * direction;
             } else {
-                forceMagnitude = force * ((MOUSE_INFLUENCE_RADIUS_PULL - Math.max(80,distance)) / MOUSE_INFLUENCE_RADIUS_PULL) * direction;
+                forceMagnitude = force * ((MOUSE_INFLUENCE_RADIUS_PULL - Math.max(MOUSE_MIN_DISTANCE,distance)) / MOUSE_INFLUENCE_RADIUS_PULL) * direction;
             }
             const fx = (dx / distance) * forceMagnitude;
             const fy = (dy / distance) * forceMagnitude;
@@ -232,7 +354,7 @@ class Bubble {
     handleSpin() {
         this.rotation += this.spinVelocity;
         // Friction: gradually reduce spin
-        this.spinVelocity *= 0.98; // Lower means faster stop
+        this.spinVelocity *= BANANA_SPIN_VELOCITY_FACTOR;
         // If it's small enough, stop completely
         if (Math.abs(this.spinVelocity) < 0.001) {
             this.spinVelocity = 0;
@@ -253,16 +375,28 @@ class MonkeyTower {
         this.x = x;
         this.y = y;
         this.arrows = [];
-        this.shootInterval = 1500 + Math.random() * 2000; // alle 1.5-3.5 Sekunden schießen
+        this.shootInterval = this.calcShootWaitTime();
         this.lastShotTime = Date.now();
+        this.createdAt = Date.now();
+        this.lifetime = MONKEY_LIFETIME;
+    }
+
+    calcShootWaitTime() {
+        return MONKEY_SHOOTINTERVAL_MIN + Math.random() * MONKEY_SHOOTINTERVAL_EXTENSION;
     }
 
     update() {
+        // Löschen
+        if (Date.now() - this.createdAt > this.lifetime) {
+            this.toRemove = true;
+            return false;
+        }
+
         // Pfeile schießen
         if (Date.now() - this.lastShotTime > this.shootInterval) {
             this.shootArrow();
             this.lastShotTime = Date.now();
-            this.shootInterval = 1500 + Math.random() * 2000;
+            this.shootInterval = this.calcShootWaitTime();
         }
 
         // Update Pfeile
@@ -275,17 +409,18 @@ class MonkeyTower {
 
         // zeichnen
         this.draw();
+        return true;
     }
 
     shootArrow() {
         const angle = Math.random() * Math.PI * 2;
-        const speed = 7 + Math.random() * 3;
+        const speed = ARROW_SPEED_MIN + Math.random() * ARROW_SPEED_EXTENSION;
         this.arrows.push(new Arrow(this.x, this.y, angle, speed));
     }
 
     draw() {
         // Affen-Emoji zeichnen
-        ctx.font = "40px serif";
+        ctx.font = `${MONKEY_FONTSIZE}px serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("🐒", this.x, this.y);
@@ -295,17 +430,29 @@ class MonkeyTower {
     }
 }
 
+
 class OrangUtanTower {
     constructor(x, y) {
         this.x = x;
         this.y = y;
         this.lastShot = 0;
-        this.shootInterval = 1500; // alle 1.5 Sekunden
+        this.shootInterval = this.calcShootWaitTime();
+        this.createdAt = Date.now();
+        this.lifetime = ORANGUTAN_LIFETIME;
+    }
+
+    calcShootWaitTime() {
+        return ORANGUTAN_SHOOTINTERVAL_MIN + Math.random() * ORANGUTAN_SHOOTINTERVAL_EXTENSION;
     }
 
     update() {
+        // Löschen
+        if (Date.now() - this.createdAt > this.lifetime) {
+            this.toRemove = true;
+            return false;
+        }
         // Emoji zeichnen
-        ctx.font = "32px sans-serif";
+        ctx.font = `${ORANGUTAN_FONTSIZE}px sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("🦧", this.x, this.y);
@@ -316,19 +463,23 @@ class OrangUtanTower {
             bananas.push(new Banana(this.x, this.y));
             this.lastShot = now;
         }
+        return true;
     }
 }
 
+
 class Banana {
     constructor(x, y) {
-        const radius = 14;
+        const radius = BANANA_RADIUS;
         const angle = Math.random() * Math.PI * 2;
-        const speed = 4 + Math.random() * 16;
+        const speed = BANANA_FORCE_MIN + Math.random() * BANANA_FORCE_EXTENSION;
         this.body = Bodies.circle(x, y, radius, {
-            frictionAir: 0.05,     // Verlangsamt sich
-            restitution: 0.8,      // Prallt ab
+            frictionAir: BANANA_FRICTIONAIR,     // Verlangsamt sich
+            restitution: BANANA_RESTITUTION,      // Prallt ab
             label: "banana"
         });
+        this.createdAt = Date.now();
+        this.lifetime = BANANA_LIFETIME;
         Body.setVelocity(this.body, {
             x: Math.cos(angle) * speed,
             y: Math.sin(angle) * speed
@@ -339,12 +490,13 @@ class Banana {
     draw() {
         const x = this.body.position.x;
         const y = this.body.position.y;
-        ctx.font = "20px serif";
+        ctx.font = `${BANANA_FONTSIZE}px serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("🍌", x, y);
     }
 }
+
 
 class Arrow {
     constructor(x, y, angle, speed) {
@@ -352,9 +504,8 @@ class Arrow {
         this.y = y;
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
-        this.radius = 15; // für Kollisionsabfrage (ungefähr)
+        this.radius = ARROW_RADIUS; // für Kollisionsabfrage (ungefähr)
         this.toRemove = false;
-        this.size = 25;
     }
 
     update() {
@@ -383,7 +534,7 @@ class Arrow {
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(angle);
-        ctx.font = `${this.size}px serif`;
+        ctx.font = `${ARROW_FONTSIZE}px serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("🪃", 0, 0);
@@ -398,16 +549,9 @@ class Arrow {
 
 
 
-
-
-
-
-
-
 function handleMouseCircle() {
     if (mouse.isDown) {
-        console.log("drawCircle", mouse.x, mouse.y);
-        const radius = 20;
+        const radius = MOUSE_CIRCLE_RADIUS;
         ctx.beginPath();
         ctx.arc(mouse.x, mouse.y, radius, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(255,255,255,0.7)";
@@ -419,6 +563,12 @@ function handleMouseCircle() {
 function handleBananaCollision() {
     for (let bananaIndex = 0; bananaIndex < bananas.length; bananaIndex++) {
         const banana = bananas[bananaIndex];
+
+        if (Date.now() - banana.createdAt > banana.lifetime) {
+            World.remove(world, banana.body);
+            bananas.splice(bananaIndex, 1);
+            continue;
+        }
         banana.draw();
 
         for (let i = 0; i < bubbles.length; i++) {
@@ -433,15 +583,9 @@ function handleBananaCollision() {
                 bananas.splice(bananaIndex, 1);
                 banana.toRemove = true;
 
-                // Apply push force
-                const angle = Math.random() * Math.PI * 2;
-                const force = 0.02 + Math.random() * 0.02;
-                const fx = Math.cos(angle) * force;
-                const fy = Math.sin(angle) * force;
-                //Body.applyForce(bubble.body, bubble.body.position, { x: fx, y: fy });
 
                 // 🌀 Add random spin
-                const spin = (Math.random() * 0.15 + 0.05) * (Math.random() < 0.5 ? -1 : 1);
+                const spin = (Math.random() * BANANA_SPIN_FORCE_EXTENSION + BANANA_SPIN_FORCE_MIN) * (Math.random() < 0.5 ? -1 : 1);
                 bubble.spinVelocity = spin
                 Body.setAngularVelocity(bubble.body, spin);
             }
@@ -452,16 +596,13 @@ function handleBananaCollision() {
 
 
 const bubbles = [];
-const bubbleCount = 20;
-for (let i = 0; i < bubbleCount; i++) {
-    bubbles.push(new Bubble());
+for (let i = 0; i < BUBBLE_COUNT; i++) {
+    bubbles.push(new Bubble(true));
 }
- /* TOWERS */
 const towers = [];
 const bananas = [];
 
-
-const globalWind = new Wind(0.000001, 0.000001, 2000, 1000, 2000, 4000, bubbles);
+const globalWind = new Wind(GLOBAL_WIND_FORCEMIN, GLOBAL_WIND_FORCEEXTENSION, GLOBAL_WIND_WAITTIMEMIN, GLOBAL_WIND_WAITTIMEEXTENSION, GLOBAL_WIND_DURATIONMIN, GLOBAL_WIND_DURATIONEXTENSION, bubbles);
 
 
 function animate() {
@@ -472,18 +613,30 @@ function animate() {
     handleMouseCircle();
     handleBananaCollision();
 
+    towers.forEach((t, i) => {
+        const keep = t.update();
+        if (!keep) towers.splice(i, 1);
+    });
+
     for (let b of bubbles) {
         b.update();
         globalWind.update();
     }
 
-    // Affen updaten & zeichnen
-    towers.forEach(t => t.update());
-
     requestAnimationFrame(animate);
 }
 
+const infoBtn = document.getElementById('infoBtn');
+const infoText = document.getElementById('infoText');
+
+infoBtn.addEventListener('click', () => {
+    infoText.classList.toggle('hidden');
+});
+
+
 animate();
+
+
 
 
 
