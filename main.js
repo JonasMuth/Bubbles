@@ -6,7 +6,7 @@ const ctx = canvas.getContext("2d");
 
 
 
-const MAX_TOWERS = 20;
+const MAX_TOWERS = 30;
 
 
 /* WIND */
