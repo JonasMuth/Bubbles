@@ -420,6 +420,9 @@ class MonkeyTower {
 
     draw() {
         // Affen-Emoji zeichnen
+        ctx.save();
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = "#000";
         ctx.font = `${MONKEY_FONTSIZE}px serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -452,6 +455,9 @@ class OrangUtanTower {
             return false;
         }
         // Emoji zeichnen
+        ctx.save();
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = "#000";
         ctx.font = `${ORANGUTAN_FONTSIZE}px sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -488,6 +494,9 @@ class Banana {
     }
 
     draw() {
+        ctx.save();
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = "#000";
         const x = this.body.position.x;
         const y = this.body.position.y;
         ctx.font = `${BANANA_FONTSIZE}px serif`;
@@ -529,6 +538,9 @@ class Arrow {
     }
 
     draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = "#000";
         const angle = Math.atan2(this.vy, this.vx);
 
         ctx.save();
