@@ -151,14 +151,14 @@ canvas.addEventListener("mousedown", (e) => {
 });
 canvas.addEventListener("mouseup", (e) => {
     mouse.isDown = false;
-    if (e.button === 0 && Date.now() - leftClickStart < 500 && checkBubbleFits(BUBBLE_RADIUS)) {
+    if (e.button === 0 && Date.now() - leftClickStart < 200 && checkBubbleFits(BUBBLE_RADIUS)) {
         const newBubble = new Bubble(false);
         Matter.Body.setPosition(newBubble.body, { x: mouse.x, y: mouse.y });
         bubbles.push(newBubble);
     }
     if (e.button === 2 && rightClickStart) {
         const heldTime = Date.now() - rightClickStart;
-        if (heldTime > 500) {
+        if (heldTime > 200) {
             towers.push(new OrangUtanTower(mouse.x, mouse.y));
         } else {
             towers.push(new MonkeyTower(mouse.x, mouse.y));
