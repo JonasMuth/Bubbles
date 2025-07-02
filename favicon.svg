@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="50mm"
+   height="50.000004mm"
+   viewBox="0 0 50 50.000004"
+   version="1.1"
+   id="svg1"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradientStops">
+      <stop
+         style="stop-color:#0077ff;stop-opacity:0;"
+         offset="0"
+         id="stop13" />
+      <stop
+         style="stop-color:#0077ff;stop-opacity:0.00784314;"
+         offset="0.68000001"
+         id="stop14" />
+      <stop
+         style="stop-color:#0077ff;stop-opacity:0.02000002;"
+         offset="0.75"
+         id="stop15" />
+      <stop
+         style="stop-color:#0077ff;stop-opacity:0.05;"
+         offset="0.80000001"
+         id="stop16" />
+      <stop
+         style="stop-color:#0077ff;stop-opacity:0.1;"
+         offset="0.85000002"
+         id="stop17" />
+      <stop
+         style="stop-color:#0077ff;stop-opacity:0.2;"
+         offset="0.89999998"
+         id="stop18" />
+      <stop
+         style="stop-color:#0077ff;stop-opacity:0.26000002;"
+         offset="0.92000002"
+         id="stop19" />
+      <stop
+         style="stop-color:#0077ff;stop-opacity:0.40000001;"
+         offset="0.94999999"
+         id="stop20" />
+      <stop
+         style="stop-color:#0077ff;stop-opacity:0.52999997;"
+         offset="0.97000003"
+         id="stop21" />
+      <stop
+         style="stop-color:#0077ff;stop-opacity:0.69942194;"
+         offset="0.99000001"
+         id="stop22" />
+      <stop
+         style="stop-color:#0077ff;stop-opacity:0.80000001;"
+         offset="1"
+         id="stop23" />
+    </linearGradient>
+    <radialGradient
+       xlink:href="#linearGradientStops"
+       id="radialGradient2-4"
+       cx="101.67223"
+       cy="149.13625"
+       fx="101.67223"
+       fy="149.13625"
+       r="25"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-37.06613,-17.264185)" />
+  </defs>
+  <g
+     id="layer1"
+     transform="translate(-128.6852,-111.01106)">
+    <g
+       id="g25"
+       transform="translate(89.079095,4.1390286)">
+      <circle
+         style="fill:url(#radialGradient2-4);stroke-width:0.264583"
+         id="path1-6"
+         cx="64.606102"
+         cy="131.87202"
+         r="25" />
+      <ellipse
+         style="fill:#ffffff;fill-opacity:0.899598;stroke:none;stroke-width:0.145283;stroke-opacity:1"
+         id="path23"
+         transform="matrix(0.8244973,-0.56586588,0.38290058,0.92378956,0,0)"
+         ry="1.8720101"
+         rx="5.0050755"
+         cy="128.14337"
+         cx="4.9892445" />
+    </g>
+  </g>
+</svg>
