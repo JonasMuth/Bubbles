@@ -1,0 +1,111 @@
+/* impressum.css - Styling für Datenschutzerklärung */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f9f9f9;
+    color: #222;
+    margin: 40px auto;
+    max-width: 900px;
+    padding: 0 20px;
+    line-height: 1.6;
+}
+
+#generator_results {
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+#generator_results_content h1 {
+    color: #003366;
+    font-size: 2.5rem;
+    margin-bottom: 0.5em;
+    border-bottom: 2px solid #003366;
+    padding-bottom: 0.3em;
+}
+
+#generator_results_content h2 {
+    color: #004080;
+    font-size: 1.8rem;
+    margin-top: 1.5em;
+    margin-bottom: 0.4em;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 0.2em;
+}
+
+#generator_results_content h3 {
+    color: #0059b3;
+    font-size: 1.4rem;
+    margin-top: 1.2em;
+    margin-bottom: 0.3em;
+}
+
+#generator_results_content h4 {
+    color: #0073e6;
+    font-size: 1.1rem;
+    margin-top: 1em;
+    margin-bottom: 0.2em;
+}
+
+#generator_results_content p,
+#generator_results_content ul {
+    font-size: 1rem;
+    margin-bottom: 1em;
+    color: #333;
+}
+
+#generator_results_content ul {
+    padding-left: 1.5em;
+}
+
+#generator_results_content ul li {
+    margin-bottom: 0.4em;
+}
+
+.generator_user_input {
+    font-weight: 600;
+    color: #222;
+    background-color: #eef5ff;
+    padding: 8px 12px;
+    border-left: 4px solid #004080;
+    margin-bottom: 1em;
+    border-radius: 4px;
+}
+
+a {
+    color: #007acc;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+a:hover,
+a:focus {
+    color: #005a99;
+    text-decoration: underline;
+}
+
+/* Responsive */
+
+@media (max-width: 600px) {
+    body {
+        margin: 20px 10px;
+        padding: 0 10px;
+    }
+
+    #generator_results_content h1 {
+        font-size: 2rem;
+    }
+
+    #generator_results_content h2 {
+        font-size: 1.5rem;
+    }
+
+    #generator_results_content h3 {
+        font-size: 1.2rem;
+    }
+
+    #generator_results_content h4 {
+        font-size: 1rem;
+    }
+}
